@@ -29,3 +29,7 @@ class CheckoutForm(forms.ModelForm):
         widgets = {
             'note': forms.Textarea(attrs={"rows": 3}),
         }
+
+class ProductSearchForm(forms.Form):  # Make sure the class name is 'ProductSearchForm'
+    search = forms.CharField(max_length=100, required=False)
+

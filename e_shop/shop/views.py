@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from .models import Product, Category, Rating, Cart, CartItem, Order, OrderItem
-from .forms import RegistrationForm, RatingForm, CheckoutForm
+from .forms import RegistrationForm, RatingForm, CheckoutForm, ProductSearchForm
 from django.db.models import Q, Min, Max, Avg
 
 from django.contrib import messages
@@ -57,37 +57,46 @@ def product_list(request, category_slug=None):
     categories = Category.objects.all()
     products = Product.objects.filter(available=True)
 
+    # Filter by category if category_slug is provided
     if category_slug:
         category = get_object_or_404(Category, slug=category_slug)
         products = products.filter(category=category)
 
+    # Get min and max price for price filtering
     min_price = products.aggregate(Min("price"))["price__min"]
     max_price = products.aggregate(Max("price"))["price__max"]
     
+    # Filter by price range
     if request.GET.get("min_price"):
         products = products.filter(price__gte=request.GET.get("min_price"))
 
     if request.GET.get("max_price"):
         products = products.filter(price__lte=request.GET.get("max_price"))
     
+    # Filter by rating
     if request.GET.get("rating"):
         min_rating = request.GET.get("rating")
         products = products.annotate(avg_rating=Avg("ratings__rating")).filter(avg_rating__gte=min_rating)
     
+    # Filter by search query
     if request.GET.get("search"):
         query = request.GET.get("search")
+        # Filter by name, description, and category name (category.name)
         products = products.filter(
             Q(name__icontains=query) |
             Q(description__icontains=query) |
-            Q(category__icontains =query)
+            Q(category__name__icontains=query)  # Correct way to filter ForeignKey field
         )
+
 
     return render(request, "shop/product_list.html", {
         "category": category,
         "categories": categories,
-        "products": products,
+         # Use paginated products
         "min_price": min_price,
-        "max_price": max_price
+        "max_price": max_price,
+        "products": products
+       
     })
 
 def product_detail(request, slug):
@@ -330,3 +339,17 @@ def rate_product(request, product_id):
         "form": form,
         "product": product
         })
+
+
+
+
+def product_search(request):
+    form = ProductSearchForm(request.GET)
+    products = Product.objects.all()
+
+    if form.is_valid():
+        search_query = form.cleaned_data['search']
+        if search_query:
+            products = products.filter(name__icontains = search_query)
+
+    return render(request, 'shop/product_search.html', {'form': form, 'products': products})

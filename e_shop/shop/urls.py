@@ -26,6 +26,8 @@ urlpatterns = [
     path('profile/', views.profile, name='profile'),
     path('rate/<int:product_id>/', views.rate_product, name='rate_product'),
 
+    path('product_search/', views.product_search, name='product_search'),
+
     
 
 ]
